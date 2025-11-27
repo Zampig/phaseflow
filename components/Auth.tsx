@@ -20,8 +20,13 @@ export const Auth: React.FC = () => {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       } else {
-        const { error } = await supabase.auth.signUp({ email, password });
+        const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
+        if (data.user && !data.session) {
+          setError("Please check your email to confirm your account.");
+          setLoading(false);
+          return;
+        }
       }
     } catch (err: any) {
       setError(err.message);
@@ -34,39 +39,39 @@ export const Auth: React.FC = () => {
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-6 animate-fade-in">
       <div className="w-full max-w-sm bg-white p-8 rounded-3xl shadow-lg border border-slate-100">
         <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-slate-800 mb-2">PhaseFlow</h1>
-            <p className="text-slate-500">Sync your cycle across devices.</p>
+          <h1 className="text-3xl font-bold text-slate-800 mb-2">PhaseFlow</h1>
+          <p className="text-slate-500">Sync your cycle across devices.</p>
         </div>
 
         <form onSubmit={handleAuth} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
             <div className="relative">
-                <Mail className="absolute left-3 top-3.5 w-5 h-5 text-slate-400" />
-                <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-200"
-                    placeholder="you@example.com"
-                />
+              <Mail className="absolute left-3 top-3.5 w-5 h-5 text-slate-400" />
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full pl-10 bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-200"
+                placeholder="you@example.com"
+              />
             </div>
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
             <div className="relative">
-                <Lock className="absolute left-3 top-3.5 w-5 h-5 text-slate-400" />
-                <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-200"
-                    placeholder="••••••••"
-                    minLength={6}
-                />
+              <Lock className="absolute left-3 top-3.5 w-5 h-5 text-slate-400" />
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full pl-10 bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-200"
+                placeholder="••••••••"
+                minLength={6}
+              />
             </div>
           </div>
 
@@ -82,12 +87,12 @@ export const Auth: React.FC = () => {
         </form>
 
         <div className="mt-6 text-center">
-            <button 
-                onClick={() => setIsLogin(!isLogin)}
-                className="text-sm text-slate-500 hover:text-slate-800 font-medium"
-            >
-                {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
-            </button>
+          <button
+            onClick={() => setIsLogin(!isLogin)}
+            className="text-sm text-slate-500 hover:text-slate-800 font-medium"
+          >
+            {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
+          </button>
         </div>
       </div>
     </div>
