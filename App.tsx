@@ -203,7 +203,8 @@ const App: React.FC = () => {
     }
 
     // ONBOARDING
-    if (!profile) {
+    // Show onboarding if no profile OR if profile exists but has no period data (fresh signup)
+    if (!profile || (!profile.lastPeriodStart && (!profile.periods || profile.periods.length === 0))) {
         const handleOnboardingComplete = async (p: UserProfile) => {
             if (!session) return;
             try {

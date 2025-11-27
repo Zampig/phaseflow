@@ -12,7 +12,7 @@ export const getLogKey = (date: Date) => format(date, 'yyyy-MM-dd');
  */
 export const getCycleStats = (profile: UserProfile) => {
   const sortedPeriods = [...(profile.periods || [])].sort((a, b) => compareDesc(parseISO(a.startDate), parseISO(b.startDate)));
-  
+
   // If no periods recorded (shouldn't happen if initialized correctly), use defaults
   if (sortedPeriods.length === 0) {
     return {
@@ -28,10 +28,10 @@ export const getCycleStats = (profile: UserProfile) => {
   // We need at least 2 periods to calculate a cycle gap
   let totalCycleDays = 0;
   let cycleCount = 0;
-  
+
   for (let i = 0; i < sortedPeriods.length - 1; i++) {
     const current = parseISO(sortedPeriods[i].startDate);
-    const previous = parseISO(sortedPeriods[i+1].startDate);
+    const previous = parseISO(sortedPeriods[i + 1].startDate);
     const diff = differenceInDays(current, previous);
     // Filter out unrealistic cycles (e.g. missed entry resulting in 60+ days or erroneous < 10 days)
     if (diff > 15 && diff < 100) {
@@ -40,8 +40,8 @@ export const getCycleStats = (profile: UserProfile) => {
     }
   }
 
-  const avgCycleLen = cycleCount > 0 
-    ? Math.round(totalCycleDays / cycleCount) 
+  const avgCycleLen = cycleCount > 0
+    ? Math.round(totalCycleDays / cycleCount)
     : profile.cycleLength;
 
   // Calculate Average Period Length
@@ -59,8 +59,8 @@ export const getCycleStats = (profile: UserProfile) => {
     }
   }
 
-  const avgPeriodLen = periodCount > 0 
-    ? Math.round(totalPeriodDays / periodCount) 
+  const avgPeriodLen = periodCount > 0
+    ? Math.round(totalPeriodDays / periodCount)
     : profile.periodLength;
 
   return { avgCycleLen, avgPeriodLen, lastStart };
@@ -81,16 +81,16 @@ export const calculatePhase = (targetDate: Date, profile: UserProfile): PhaseInf
     // For specific date check: 
     // If closed: start <= target <= end
     // If open: start <= target && target <= today (roughly)
-    
+
     if (p.endDate) {
       const end = parseISO(p.endDate);
       return isWithinInterval(target, { start, end });
     } else {
-       // For an open period, we treat it as active for the target date if target >= start 
-       // AND target isn't ridiculously far in future (e.g. next month). 
-       // But simpler: Is target >= start? And is it reasonably "current"?
-       // Let's just strictly check start. We'll handle "old open periods" by recommending closing them in UI.
-       return target >= start && differenceInDays(target, start) < 20; 
+      // For an open period, we treat it as active for the target date if target >= start 
+      // AND target isn't ridiculously far in future (e.g. next month). 
+      // But simpler: Is target >= start? And is it reasonably "current"?
+      // Let's just strictly check start. We'll handle "old open periods" by recommending closing them in UI.
+      return target >= start && differenceInDays(target, start) < 20;
     }
   });
 
@@ -114,10 +114,24 @@ export const calculatePhase = (targetDate: Date, profile: UserProfile): PhaseInf
 
   // 2. Predict based on history
   const { avgCycleLen, avgPeriodLen, lastStart } = getCycleStats(profile);
+
+  if (!lastStart) {
+    return {
+      type: PhaseType.FOLLICULAR,
+      dayOfCycle: 1,
+      description: "Welcome! Log your period to get started.",
+      color: "text-slate-600",
+      bgColor: "bg-slate-100",
+      isPmsDay: false,
+      isRecordedPeriod: false,
+      tips: { exercise: "", food: "", mood: "" }
+    };
+  }
+
   const lastPeriodDate = startOfDay(parseISO(lastStart));
-  
+
   const diff = differenceInDays(target, lastPeriodDate);
-  
+
   let dayOfCycle = diff % avgCycleLen;
   if (dayOfCycle < 0) {
     dayOfCycle = avgCycleLen + dayOfCycle;
@@ -204,6 +218,9 @@ export interface CycleEvent {
 export const getUpcomingEvents = (profile: UserProfile, today: Date, daysToCheck: number = 7): CycleEvent[] => {
   const events: CycleEvent[] = [];
   const { avgCycleLen, lastStart } = getCycleStats(profile);
+
+  if (!lastStart) return [];
+
   const lastPeriodDate = startOfDay(parseISO(lastStart));
 
   // Determine calculation boundaries based on current settings
@@ -215,7 +232,7 @@ export const getUpcomingEvents = (profile: UserProfile, today: Date, daysToCheck
   for (let i = 0; i <= daysToCheck; i++) {
     const targetDate = addDays(today, i);
     const diff = differenceInDays(targetDate, lastPeriodDate);
-    
+
     // Normalize to cycle day (1-based)
     let dayOfCycle = diff % avgCycleLen;
     if (dayOfCycle < 0) dayOfCycle = avgCycleLen + dayOfCycle;
@@ -227,35 +244,35 @@ export const getUpcomingEvents = (profile: UserProfile, today: Date, daysToCheck
 
     // Check Period Start (Day 1)
     if (currentDay === 1 && profile.notifications.periodSoon) {
-       events.push({
-         type: 'PERIOD_START',
-         date: targetDate,
-         daysUntil: i,
-         label: 'Period is predicted to start'
-       });
+      events.push({
+        type: 'PERIOD_START',
+        date: targetDate,
+        daysUntil: i,
+        label: 'Period is predicted to start'
+      });
     }
-    
+
     // Check Ovulation Window Start
     if (currentDay === fertileStart && profile.notifications.ovulationWindow) {
-        events.push({
-            type: 'OVULATION_START',
-            date: targetDate,
-            daysUntil: i,
-            label: 'Ovulation window begins'
-        });
+      events.push({
+        type: 'OVULATION_START',
+        date: targetDate,
+        daysUntil: i,
+        label: 'Ovulation window begins'
+      });
     }
 
     // Check PMS Window Start
     if (currentDay === pmsStart && profile.notifications.pmsWindow) {
-        events.push({
-            type: 'PMS_START',
-            date: targetDate,
-            daysUntil: i,
-            label: 'PMS window starts'
-        });
+      events.push({
+        type: 'PMS_START',
+        date: targetDate,
+        daysUntil: i,
+        label: 'PMS window starts'
+      });
     }
   }
-  
+
   return events;
 };
 
@@ -263,22 +280,25 @@ export const getUpcomingEvents = (profile: UserProfile, today: Date, daysToCheck
  * Helper to check if a specific date is a start day for calendar markers
  */
 export const getEventMarker = (date: Date, profile: UserProfile): 'PERIOD' | 'OVULATION' | 'PMS' | null => {
-    const { avgCycleLen, lastStart } = getCycleStats(profile);
-    const lastPeriodDate = startOfDay(parseISO(lastStart));
-    const diff = differenceInDays(date, lastPeriodDate);
-    
-    let dayOfCycle = diff % avgCycleLen;
-    if (dayOfCycle < 0) dayOfCycle = avgCycleLen + dayOfCycle;
-    const currentDay = dayOfCycle + 1;
+  const { avgCycleLen, lastStart } = getCycleStats(profile);
 
-    const ovulationDay = avgCycleLen - 14;
-    const fertileStart = ovulationDay - 2;
-    const pmsLen = profile.pmsLength || 5;
-    const pmsStart = avgCycleLen - pmsLen + 1;
+  if (!lastStart) return null;
 
-    if (currentDay === 1) return 'PERIOD';
-    if (currentDay === fertileStart) return 'OVULATION';
-    if (currentDay === pmsStart) return 'PMS';
+  const lastPeriodDate = startOfDay(parseISO(lastStart));
+  const diff = differenceInDays(date, lastPeriodDate);
 
-    return null;
+  let dayOfCycle = diff % avgCycleLen;
+  if (dayOfCycle < 0) dayOfCycle = avgCycleLen + dayOfCycle;
+  const currentDay = dayOfCycle + 1;
+
+  const ovulationDay = avgCycleLen - 14;
+  const fertileStart = ovulationDay - 2;
+  const pmsLen = profile.pmsLength || 5;
+  const pmsStart = avgCycleLen - pmsLen + 1;
+
+  if (currentDay === 1) return 'PERIOD';
+  if (currentDay === fertileStart) return 'OVULATION';
+  if (currentDay === pmsStart) return 'PMS';
+
+  return null;
 };
