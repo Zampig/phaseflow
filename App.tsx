@@ -18,7 +18,8 @@ import {
     fetchLogs,
     saveLog,
     fetchFavorites,
-    toggleFavoriteDB
+    toggleFavoriteDB,
+    deletePeriod
 } from './utils/db';
 import { Loader2, AlertCircle } from 'lucide-react';
 
@@ -171,6 +172,43 @@ const App: React.FC = () => {
         }
     };
 
+    const handleAddPastPeriod = async (startDate: string, endDate: string | null) => {
+        if (!session || !profile) return;
+        try {
+            // Add to DB
+            const newPeriod = await addPeriod(session.user.id, startDate);
+
+            // If endDate provided (it should be for history), update it
+            if (endDate) {
+                newPeriod.endDate = endDate;
+                await updatePeriod(session.user.id, newPeriod);
+            }
+
+            // Update local state
+            const updatedPeriods = [...(profile.periods || []), newPeriod].sort((a, b) =>
+                new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+            );
+
+            setProfile({ ...profile, periods: updatedPeriods });
+        } catch (e) {
+            console.error("Failed to add past period", e);
+            throw e;
+        }
+    };
+
+    const handleDeletePeriod = async (periodId: string) => {
+        if (!session || !profile) return;
+        try {
+            await deletePeriod(session.user.id, periodId);
+
+            const updatedPeriods = profile.periods.filter(p => p.id !== periodId);
+            setProfile({ ...profile, periods: updatedPeriods });
+        } catch (e) {
+            console.error("Failed to delete period", e);
+            throw e;
+        }
+    };
+
     // ERROR STATE
     if (connectionError) {
         return (
@@ -237,7 +275,14 @@ const App: React.FC = () => {
                 {activeTab === 'calendar' && <CalendarView profile={profile} logs={logs} />}
                 {activeTab === 'phases' && <PhasesView profile={profile} favorites={favorites} onToggleFavorite={handleToggleFavorite} />}
                 {activeTab === 'insights' && <InsightsView profile={profile} logs={logs} />}
-                {activeTab === 'settings' && <SettingsView profile={profile} onUpdate={handleProfileUpdate} />}
+                {activeTab === 'settings' && (
+                    <SettingsView
+                        profile={profile}
+                        onUpdate={handleProfileUpdate}
+                        onAddPeriod={handleAddPastPeriod}
+                        onDeletePeriod={handleDeletePeriod}
+                    />
+                )}
             </div>
         </Layout>
     );

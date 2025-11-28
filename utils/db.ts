@@ -64,7 +64,7 @@ export const updateProfileSettings = async (userId: string, profile: UserProfile
       notify_pms_window: profile.notifications.pmsWindow,
       updated_at: new Date().toISOString()
     });
-  
+
   if (error) throw error;
 };
 
@@ -75,7 +75,7 @@ export const addPeriod = async (userId: string, startDate: string): Promise<Peri
     .insert({ user_id: userId, start_date: startDate })
     .select()
     .single();
-    
+
   if (error) throw error;
   return { id: data.id, startDate: data.start_date, endDate: data.end_date };
 };
@@ -86,6 +86,16 @@ export const updatePeriod = async (userId: string, period: Period) => {
     .from('periods')
     .update({ start_date: period.startDate, end_date: period.endDate })
     .eq('id', period.id)
+    .eq('user_id', userId);
+
+  if (error) throw error;
+};
+
+export const deletePeriod = async (userId: string, periodId: string) => {
+  const { error } = await supabase
+    .from('periods')
+    .delete()
+    .eq('id', periodId)
     .eq('user_id', userId);
 
   if (error) throw error;
@@ -169,7 +179,7 @@ export const fetchFavorites = async (userId: string): Promise<FavoritesMap> => {
 export const toggleFavoriteDB = async (userId: string, phase: PhaseType, category: 'exercise' | 'food' | 'supplements', item: string, isAdding: boolean) => {
   // Map category to DB item_type
   let dbType = category === 'food' ? 'focus_food' : (category === 'supplements' ? 'supplement' : 'exercise');
-  
+
   if (isAdding) {
     await supabase.from('favorites').insert({
       user_id: userId,
@@ -182,9 +192,9 @@ export const toggleFavoriteDB = async (userId: string, phase: PhaseType, categor
     // Note: If mapped types overlap (like hydration/supplement both -> supplements), this simple mapping might miss.
     // For MVP, we'll try to delete both potential types if category is supplements
     if (category === 'supplements') {
-         await supabase.from('favorites').delete().eq('user_id', userId).eq('phase', phase).in('item_type', ['supplement', 'hydration']).eq('label', item);
+      await supabase.from('favorites').delete().eq('user_id', userId).eq('phase', phase).in('item_type', ['supplement', 'hydration']).eq('label', item);
     } else {
-         await supabase.from('favorites').delete().eq('user_id', userId).eq('phase', phase).eq('item_type', dbType).eq('label', item);
+      await supabase.from('favorites').delete().eq('user_id', userId).eq('phase', phase).eq('item_type', dbType).eq('label', item);
     }
   }
 };

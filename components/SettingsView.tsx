@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
-import { UserProfile } from '../types';
+import { UserProfile, Period } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { Button } from './Button';
 import { AboutHelpView } from './AboutHelpView';
+import { PeriodHistoryManager } from './PeriodHistoryManager';
 import { Bell, Calendar, Clock, CloudRain, Layers, RefreshCcw, LayoutTemplate, HelpCircle, ChevronRight, LogOut } from 'lucide-react';
 
 interface SettingsViewProps {
   profile: UserProfile;
   onUpdate: (profile: UserProfile) => void;
+  onAddPeriod: (startDate: string, endDate: string | null) => Promise<void>;
+  onDeletePeriod: (periodId: string) => Promise<void>;
 }
 
-export const SettingsView: React.FC<SettingsViewProps> = ({ profile, onUpdate }) => {
-  const [viewMode, setViewMode] = useState<'settings' | 'about'>('settings');
+export const SettingsView: React.FC<SettingsViewProps> = ({ profile, onUpdate, onAddPeriod, onDeletePeriod }) => {
+  const [viewMode, setViewMode] = useState<'settings' | 'about' | 'history'>('settings');
 
   // Ensure we have defaults if adding new fields to an existing profile
   const [formData, setFormData] = useState<UserProfile>({
@@ -99,12 +102,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ profile, onUpdate })
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Last Period Start</label>
-              <input
-                type="date"
-                value={formData.lastPeriodStart}
-                onChange={(e) => handleChange('lastPeriodStart', e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-200"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  value={formData.lastPeriodStart}
+                  onChange={(e) => handleChange('lastPeriodStart', e.target.value)}
+                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-200"
+                />
+                <button
+                  onClick={() => setViewMode('history')}
+                  className="px-4 bg-slate-100 text-slate-600 font-medium rounded-xl hover:bg-slate-200 transition-colors text-sm"
+                >
+                  Edit History
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -251,6 +262,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ profile, onUpdate })
           {isSaved ? 'Settings Saved' : 'Save Changes'}
         </Button>
       </div>
+
+      {viewMode === 'history' && (
+        <PeriodHistoryManager
+          periods={profile.periods || []}
+          onAddPeriod={onAddPeriod}
+          onDeletePeriod={onDeletePeriod}
+          onClose={() => setViewMode('settings')}
+        />
+      )}
     </div>
   );
 };
